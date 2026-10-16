@@ -1,32 +1,50 @@
 import importlib.metadata
 import sys
 
+PACKAGES = {
+    "pandas": "Data manipulation ready",
+    "numpy": "Numerical computation ready",
+    "matplotlib": "Visualization ready",
+}
+
+
+def get_version(pkg: str) -> str | None:
+    try:
+        return importlib.metadata.version(pkg)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
 
 def check_dependencies() -> bool:
     print("LOADING STATUS: Loading programs...")
     print("Checking dependencies:")
-
-    packages = {
-        "pandas": "Data manipulation ready",
-        "numpy": "Numerical computation ready",
-        "matplotlib": "Visualization ready",
-    }
     all_ready = True
-
-    for pkg, desc in packages.items():
-        try:
-            version = importlib.metadata.version(pkg)
-            print(f"[OK] {pkg} ({version}) - {desc}")
-        except importlib.metadata.PackageNotFoundError:
+    for pkg, desc in PACKAGES.items():
+        version = get_version(pkg)
+        if version is None:
             print(f"[MISSING] {pkg}")
             all_ready = False
-
+        else:
+            print(f"[OK] {pkg} ({version}) - {desc}")
     return all_ready
+
+
+def detect_manager() -> str:
+    if sys.prefix == sys.base_prefix:
+        return "global Python (no virtual environment)"
+    if "pypoetry" in sys.prefix or ".venv" in sys.prefix:
+        return "Poetry"
+    return "pip (manual venv)"
 
 
 def compare_managers() -> None:
     print("\npip vs Poetry:")
-    print("  pip    : requirements.txt, manual venv, no lock file")
+    print(f"  Running under: {detect_manager()}")
+    print(f"  Interpreter  : {sys.executable}")
+    print("\n  Installed versions:")
+    for pkg in PACKAGES:
+        print(f"    {pkg:<12} {get_version(pkg) or 'not installed'}")
+    print("\n  pip    : requirements.txt, manual venv, no lock file")
     print("  Poetry : pyproject.toml + poetry.lock, auto venv")
     print("  Run with pip   : python3 loading.py")
     print("  Run with Poetry: poetry run python loading.py")
@@ -69,6 +87,7 @@ def analyze_matrix_data() -> None:
 
 def main() -> None:
     if not check_dependencies():
+        compare_managers()
         print("\nMissing dependencies! Install them with:")
         print("  pip    : pip install -r requirements.txt")
         print("  Poetry : poetry install")
